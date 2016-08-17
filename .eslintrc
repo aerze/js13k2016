@@ -1,0 +1,33 @@
+{
+  "extends": "airbnb",
+  "env": {
+    "browser": true,
+    "node": true,
+  },
+  "rules": {
+    "comma-dangle": 0, // trailing commas
+    "no-var": 0, // let const
+    "quotes": [2, "single", "avoid-escape"], // forces single quotes
+    "quote-props": [2, "consistent"],
+    "object-shorthand": [2, "never"],
+    "no-param-reassign": 0,
+    "no-unused-vars": 2,
+    "no-undef": 2,
+    "max-len": 0,
+    "no-else-return": 1,
+    "func-names": 0,
+    "dot-notation": 0,
+    "camelcase": 0,
+    "new-cap": 0,
+
+    "prefer-arrow-callback": 0,
+    "prefer-template": 0,
+
+    "react/prefer-es6-class": 0,
+    "react/require-extension": 0,
+  },
+  "globals": { // bool: allow reassignment
+    "TC": false,
+    "TCTex": false
+  }
+}
