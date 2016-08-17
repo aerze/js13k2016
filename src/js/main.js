@@ -9,7 +9,9 @@ var gl = canvas.g;
 var RIGHT = false;
 var LEFT = false;
 var JUMP = false;
+var DIR = 'R';
 var GROUND = true;
+var WALK = 1;
 
 var imagesLoaded = 0;
 var dude;
@@ -78,6 +80,7 @@ function Sprite(x, y, texture, frameX, frameY, frameW, frameH) {
 
   this.u1 = this.u0 + (frameW / texture.width);
   this.v1 = this.v0 + (frameH / texture.height);
+  this.v1 = 1;
 
   this.halfWidth = frameW / 2;
 }
@@ -136,11 +139,11 @@ function update() {
   // }
 
   if (RIGHT) {
-    dude.speedX = Math.min(dude.speedX + 1, 10);
+    dude.speedX = Math.min(dude.speedX + WALK, 10);
   }
 
   if (LEFT) {
-    dude.speedX = Math.max(dude.speedX - 1, -10);
+    dude.speedX = Math.max(dude.speedX - WALK, -10);
   }
 
   if (JUMP && GROUND) {
@@ -235,6 +238,12 @@ function draw() {
   canvas.push();
   canvas.trans(dude.positionX, dude.positionY);
   canvas.rot(dude.rotation);
+  if (DIR === 'L') {
+    canvas.scale(-1, 1);
+  }
+  if (DIR === 'R') {
+    canvas.scale(1, 1);
+  }
   canvas.img(
     dudeTexture,
     -dude.halfWidth,
@@ -248,7 +257,19 @@ function draw() {
   );
   canvas.pop();
   canvas.flush();
-  console.log('post', dude.positionY);
+  // console.log('post', dude.positionY);
+
+  // console.log(
+  //   dudeTexture,
+  //   -dude.halfWidth,
+  //   0,
+  //   dude.width,
+  //   dude.height,
+  //   dude.u0,
+  //   dude.v0,
+  //   dude.u1,
+  //   dude.v1
+  // );
 }
 
 function mainLoop() {
@@ -284,8 +305,10 @@ document.onkeydown = function (event) {
   event.preventDefault();
   if (event.keyCode === 39) {
     RIGHT = true;
+    DIR = 'R';
   } else if (event.keyCode === 37) {
     LEFT = true;
+    DIR = 'L';
   } else if (event.keyCode === 38) {
     JUMP = true;
   }
