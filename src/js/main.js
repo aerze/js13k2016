@@ -1,56 +1,101 @@
 
 import './libs/tiny-canvas.js';
 
+/**
+ * Tiny-Canvas Canvas
+ * @type {TCCanvas}
+ */
+var CANVAS = TC(document.getElementById('c'));
 
-var canvas = TC(document.getElementById('c'));
+/**
+ * Tint-Canvas
+ * @type {TCGLContext}
+ */
+var GL = CANVAS.g;
 
-var gl = canvas.g;
-
+/**
+ * Is RIGHT key pressed
+ * @type {Boolean}
+ */
 var RIGHT = false;
+
+/**
+ * Is LEFT key pressed
+ * @type {Boolean}
+ */
 var LEFT = false;
+
+/**
+ * Is JUMP Key pressed
+ * @type {Boolean}
+ */
 var JUMP = false;
+
+/**
+ * Positive jump speed
+ * @type {Number}
+ */
+var JUMP_SPEED = 8;
+/**
+ * Direction Player is facing
+ * R = right L = left
+ * @type {String}
+ */
 var DIR = 'R';
+
+/**
+ * is Player touching the ground
+ * @type {Boolean}
+ */
 var GROUND = true;
-var WALK = 1;
 
-var imagesLoaded = 0;
-var dude;
+/**
+ * Player walk speed
+ * @type {Number}
+ */
+var WALK_SPEED = 1;
 
-var kittenImage = new Image();
-var dudeImage = new Image();
+/**
+ * Top Player walk speed
+ * @type {Number}
+ */
+var TOP_SPEED = 4;
 
-var kittenTexture = null;
-var dudeTexture = null;
+/**
+ * Number of images whose load has completed
+ * @type {Number}
+ */
+var IMAGES_LOADED = 0;
 
-var gravity = 0.5;
+/**
+ * Total Number of images expected to load
+ * @type {Number}
+ */
+var TOTAL_IMAGES = 1;
 
-var random = Math.random;
+/**
+ * Player Sprite object
+ * @type {Sprite}
+ */
+var Player = {};
 
-var maxX = canvas.c.width;
+/**
+ * Player .png
+ * @type {Image}
+ */
+var PlayerImage = new Image();
 
-var minX = 0;
+/**
+ * Player image as Tiny-Canvas Texture
+ * @type {TCTexture}
+ */
+var PlayerTexture = null;
 
-var maxY = canvas.c.height;
-
-var minY = 0;
-
-var add = false;
-
-var startBunnyCount = 0;
-
-var count = 0;
-
-var amount = 100;
-
-var kittens = [];
-
-var frames = [
-  [0, 0, 32, 32],
-  [0, 32, 32, 32],
-  [0, 64, 32, 32],
-  [0, 96, 32, 32]
-];
-var dudeFrames = [
+/**
+ * List of frames in the Player Image
+ * @type {Array}
+ */
+var PlayerFrames = [
   [0, 0, 16, 20],
   [16, 0, 16, 20],
   [32, 0, 16, 20],
@@ -59,269 +104,316 @@ var dudeFrames = [
   [80, 0, 16, 20],
 ];
 
-var currentFrame = 0;
+/**
+ * TODO: Add desc
+ * @type {Number}
+ */
+var GRAVITY = 0.5;
 
-function Sprite(x, y, texture, frameX, frameY, frameW, frameH) {
-  this.positionX = x;
-  this.positionY = y;
+/**
+ * Proxy func for Math.random
+ * @type {Function}
+ * @returns {Number} Between 0 & 1
+ */
+var rand = Math.random();
 
-  this.width = frameW;
-  this.height = frameH;
+/**
+ * Canvas Width (256)
+ * @type {Number}
+ */
+var MAX_X = CANVAS.c.width;
 
-  this.texture = texture;
+/**
+ * Canvas X Origin
+ * @type {Number}
+ */
+var MIN_X = 0;
 
+/**
+ * Canvas Height (256)
+ * @type {Number}
+ */
+var MAX_Y = CANVAS.c.height;
+
+/**
+ * Canvas Y Origin
+ * @type {Number}
+ */
+var MIN_Y = 0;
+
+/**
+ * Array of objects to push to the update + draw functions
+ * @type {Array}
+ */
+var DisplayObjectArray = [];
+
+/**
+ * @class An Image based DisplayObject
+ * @param {Number} x       Starting X position
+ * @param {Number} y       Starting Y position
+ * @param {TCTexture} texture Tiny-Canvas Texture object
+ * @param {Number[]} frame   Frame position data [x, y, width, height]
+ * @return {Sprite}
+ */
+function Sprite(x, y, texture, frame) {
+  /**
+   * Canvas X position
+   * @type {Number}
+   */
+  this.posX = x;
+
+  /**
+   * Canvas Y position
+   * @type {Number}
+   */
+  this.posY = y;
+
+  /**
+   * Frame width
+   * @type {Number}
+   */
+  this.width = frame[2];
+
+  /**
+   * Frame Height
+   * @type {[type]}
+   */
+  this.height = frame[3];
+
+  /**
+   * Speed on the X plane
+   * Left = 0, Right = Canvas Width
+   * @type {Number}
+   */
   this.speedX = 0;
+
+  /**
+   * Speed on the Y plane.
+   * Top = 0, Bottom = Canvas.height
+   * @type {Number}
+   */
   this.speedY = 0;
 
+  /**
+   * Rotation ?? Radians? Degrees?
+   * @type {Number}
+   */
   this.rotation = 0;
 
-  this.u0 = frameX / texture.width;
-  this.v0 = frameY / texture.height;
+  /**
+   * FrameX / Texture's total width;
+   * @type {Number}
+   */
+  this.u0 = frame[0] / texture.width;
 
-  this.u1 = this.u0 + (frameW / texture.width);
-  this.v1 = this.v0 + (frameH / texture.height);
-  this.v1 = 1;
+  /**
+   * FrameY / Texture's total height
+   * @type {Number}
+   */
+  this.v0 = frame[1] / texture.height;
 
-  this.halfWidth = frameW / 2;
+  /**
+   * u0 plus (Frame's width / Texture's total Width)
+   * @type {Number}
+   */
+  this.u1 = this.u0 + (frame[2] / texture.width);
+
+  /**
+   * v0 plus (Frame's height / Texture's total height)
+   * @type {[type]}
+   */
+  this.v1 = this.v0 + (frame[3] / texture.height);
+
+  /**
+   * Half of the Frame's width
+   * @type {Number}
+   */
+  this.halfWidth = frame[2] / 2;
+
+  /**
+   * Half of the Frame's height
+   * @type {Number}
+   */
+  this.halfHeight = frame[3] / 2;
 }
 
+
+/**
+ * Sets source on all images to start loading
+ */
 function load() {
-  kittenImage.src = 'data:image/png;base64,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';
-  dudeImage.src = 'assets/person_cut.png';
+  PlayerImage.src = 'assets/person_cut.png';
 }
 
-function start() {
-  console.log(imagesLoaded);
-  if (imagesLoaded !== 2) return;
+/**
+ * Fired on every load, will call create once last image has loaded
+ */
+function loadComplete() {
+  if (IMAGES_LOADED !== TOTAL_IMAGES) return;
   create();
 }
 
+/**
+ * Creates all sprites
+ */
 function create() {
-  var kitten = {};
-  var frame = frames[currentFrame];
-  var i = 0;
+  Player = new Sprite(20, 0, PlayerTexture, PlayerFrames[0]);
 
-
-  for (i = 0; i < startBunnyCount; i++) {
-    kitten = new Sprite(0, 0, kittenTexture, frame[0], frame[1], frame[2], frame[3]);
-    kitten.speedX = random() * 10;
-    kitten.speedY = (random() * 10) - 5;
-    // kitten.rotation = (random() * 10) - 0.5;
-    kittens[count++] = kitten;
-  }
-  console.log(count, ' kittens');
-  console.log(kittens);
-
-  dude = new Sprite(0, 0, dudeTexture, 0, 0, 16, 20);
-  // dude.rotation = (random() * 10) - 0.5;
-
-  canvas.bkg(0.227, 0.227, 0.227);
+  CANVAS.bkg(0.227, 0.227, 0.227);
   mainLoop();
 }
 
+/**
+ * MAIN LOOP UPDATE
+ * very hot code path, try not to make many function calls
+ * only read and set values if at all possible
+ */
 function update() {
-  var frame = [];
-  var i = 0;
-  var kitten = {};
-
-  // if (add) {
-  //   if (count < 200000) {
-  //     frame = frames[currentFrame];
-  //     for (i = 0; i < amount; i++) {
-  //       kitten = new Sprite(0, 0, kittenTexture, frame[0], frame[1], frame[2], frame[3]);
-  //       kitten.speedX = random() * 10;
-  //       kitten.speedY = (random() * 10) - 5;
-  //       kitten.rotation = (random() * 10) - 0.5;
-  //       kittens[count++] = kitten;
-  //     }
-  //     console.log(count, ' kittens');
-  //   }
-  // }
-
+  /**
+   * HANDLE KEY PRESSES
+   * update player speeds by preset speeds
+   */
   if (RIGHT) {
-    dude.speedX = Math.min(dude.speedX + WALK, 10);
+    Player.speedX = Math.min(Player.speedX + WALK_SPEED, TOP_SPEED);
   }
 
   if (LEFT) {
-    dude.speedX = Math.max(dude.speedX - WALK, -10);
+    Player.speedX = Math.max(Player.speedX - WALK_SPEED, -TOP_SPEED);
   }
 
   if (JUMP && GROUND) {
-    dude.speedY = -10;
+    Player.speedY = -JUMP_SPEED;
     GROUND = false;
   }
 
-  dude.positionX += dude.speedX;
-  dude.positionY += dude.speedY;
-  dude.speedY += gravity;
+  /**
+   * Update player to new position
+   */
+  Player.posX += Player.speedX;
+  Player.posY += Player.speedY;
 
+  /**
+   * Update Player gravity
+   */
+  Player.speedY += GRAVITY;
 
-  if (Math.abs(dude.speedX) < 1) {
-    dude.speedX = 0;
+  /**
+   * Apply friction to player if they're walking
+   */
+  if (Math.abs(Player.speedX) < 1) {
+    Player.speedX = 0;
+  } else {
+    Player.speedX *= 0.9;
   }
 
-  if (Math.abs(dude.speedX) >= 1) {
-    dude.speedX *= 0.9;
-  }
-
-  if (dude.positionY + dude.height >= maxY) {
-    dude.positionY = maxY - dude.height;
-    dude.speedY = 0;
+  /**
+   * Clamp Player to Canvas
+   */
+  if (Player.posY + Player.height >= MAX_Y) {
+    Player.posY = MAX_Y - Player.height;
+    Player.speedY = 0;
     GROUND = true;
-  } else if (dude.positionY < minY) {
-    dude.positionY = minY;
+  } else if (Player.posY < MIN_Y) {
+    Player.posY = MIN_Y;
   }
 
-  if (dude.positionX > maxX) {
-    dude.speedX *= -1;
-    dude.positionX = maxX;
-  } else if (dude.positionX < minX) {
-    dude.speedX *= -1;
-    dude.positionX = minX;
-  }
-
-  // physics update
-  for (i = 0; i < count; i++) {
-    kitten = kittens[i];
-    kitten.positionX += kitten.speedX;
-    kitten.positionY += kitten.speedY;
-    kitten.speedY += gravity;
-
-    if (kitten.positionX > maxX) {
-      kitten.speedX *= -1;
-      kitten.positionX = maxX;
-    } else if (kitten.positionX < minX) {
-      kitten.speedX *= -1;
-      kitten.positionX = minX;
-    }
-
-    if (kitten.positionY > maxY) {
-      kitten.speedY *= -0.85;
-      kitten.positionY = maxY;
-      kitten.spin = (random() - 0.5) * 0.2;
-
-      if (random() > 0.5) {
-        kitten.speedY -= random() * 6;
-      }
-    } else if (kitten.positionY < minY) {
-      kitten.speedY = 0;
-      kitten.positionY = minY;
-    }
+  if (Player.posX > MAX_X) {
+    Player.speedX *= -1;
+    Player.posX = MAX_X;
+  } else if (Player.posX < MIN_X) {
+    Player.speedX *= -1;
+    Player.posX = MIN_X;
   }
 }
 
+/**
+ * MAIN LOOP DRAW
+ * very hot code path, try not to make many function calls
+ * only read and set values if at all possible
+ */
 function draw() {
-  var kitten = {};
-  var i = 0;
+  /**
+   * Clear canvas
+   */
+  CANVAS.cls();
 
-  canvas.cls();
+  CANVAS.push();
+  CANVAS.trans(Player.posX, Player.posY);
+  CANVAS.rot(Player.rotation);
 
-  for (i = 0; i < count; i++) {
-    kitten = kittens[i];
-    canvas.push();
-    canvas.trans(kitten.positionX, kitten.positionY);
-    canvas.rot(kitten.rotation);
-    canvas.img(
-      kitten.texture,
-      -kitten.halfWidth,
-      0,
-      kitten.width,
-      kitten.height,
-      kitten.u0,
-      kitten.v0,
-      kitten.u1,
-      kitten.v1
-    );
-    canvas.pop();
-  }
-
-  canvas.push();
-  canvas.trans(dude.positionX, dude.positionY);
-  canvas.rot(dude.rotation);
-  if (DIR === 'L') {
-    canvas.scale(-1, 1);
-  }
   if (DIR === 'R') {
-    canvas.scale(1, 1);
+    CANVAS.scale(1, 1);
+  } else {
+    CANVAS.scale(-1, 1);
   }
-  canvas.img(
-    dudeTexture,
-    -dude.halfWidth,
-    0,
-    dude.width,
-    dude.height,
-    dude.u0,
-    dude.v0,
-    dude.u1,
-    dude.v1
-  );
-  canvas.pop();
-  canvas.flush();
-  // console.log('post', dude.positionY);
 
-  // console.log(
-  //   dudeTexture,
-  //   -dude.halfWidth,
-  //   0,
-  //   dude.width,
-  //   dude.height,
-  //   dude.u0,
-  //   dude.v0,
-  //   dude.u1,
-  //   dude.v1
-  // );
+  CANVAS.img(
+    PlayerTexture,
+    -Player.halfWidth,
+    0,
+    Player.width,
+    Player.height,
+    Player.u0,
+    Player.v0,
+    Player.u1,
+    Player.v1
+  );
+
+  CANVAS.pop();
+
+  CANVAS.flush();
 }
 
+/**
+ * MAIN GAME LOOP
+ */
 function mainLoop() {
   requestAnimationFrame(mainLoop);
   update();
   draw();
 }
 
-canvas.c.onmousedown = function () {
-  add = true;
-  currentFrame = (currentFrame + 1) % frames.length;
-};
-
-canvas.c.onmouseup = function () {
-  add = false;
-};
-
-kittenImage.onload = function () {
-  kittenTexture = TCTex(gl, kittenImage, kittenImage.width, kittenImage.height);
-  document.body.appendChild(kittenImage);
-  imagesLoaded += 1;
-  start();
-};
-
-dudeImage.onload = function () {
-  dudeTexture = TCTex(gl, dudeImage, dudeImage.width, dudeImage.height);
-  document.body.appendChild(dudeImage);
-  imagesLoaded += 1;
-  start();
-};
-
+/**
+ * Handler for keyUp events
+ * @param  {Event} event Any key presses
+ */
 document.onkeydown = function (event) {
-  event.preventDefault();
-  if (event.keyCode === 39) {
-    RIGHT = true;
-    DIR = 'R';
-  } else if (event.keyCode === 37) {
+  if (event.keyCode === 37) {
     LEFT = true;
     DIR = 'L';
+    event.preventDefault();
   } else if (event.keyCode === 38) {
     JUMP = true;
+    event.preventDefault();
+  } else if (event.keyCode === 39) {
+    RIGHT = true;
+    DIR = 'R';
+    event.preventDefault();
   }
 };
 
+/**
+ * Handler for keyDown events
+ * @param  {Event} event Any key up
+ */
 document.onkeyup = function (event) {
-  if (event.keyCode === 39) {
-    RIGHT = false;
-  } else if (event.keyCode === 37) {
+  if (event.keyCode === 37) {
     LEFT = false;
   } else if (event.keyCode === 38) {
     JUMP = false;
+  } else if (event.keyCode === 39) {
+    RIGHT = false;
   }
+};
+
+/**
+ * Callback for image load
+ * @return {[type]} [description]
+ */
+PlayerImage.onload = function () {
+  PlayerTexture = TCTex(GL, PlayerImage, PlayerImage.width, PlayerImage.height);
+  IMAGES_LOADED += 1;
+  loadComplete();
 };
 
 load();
