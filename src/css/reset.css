@@ -17,3 +17,13 @@ canvas{
     user-select: none;
    -webkit-tap-highlight-color: rgba(255, 255, 255, 0); /* mobile webkit */
 }
+
+#c {
+    width: 512px;
+    height: 512px;
+    image-rendering: pixelated;
+    image-rendering: -moz-crisp-edges;         /* Firefox */
+    image-rendering:   -o-crisp-edges;         /* Opera */
+    image-rendering: -webkit-optimize-contrast;/* Webkit (non-standard naming) */
+    -ms-interpolation-mode: nearest-neighbor;  /* IE (non-standard property) */
+}
