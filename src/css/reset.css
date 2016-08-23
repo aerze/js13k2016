@@ -1,6 +1,7 @@
 body {
     font-family: Verdana, Arial;
     font-size: 10px;
+    height: 540px;
 }
 canvas{
     border: 3px solid black;
@@ -21,9 +22,9 @@ canvas{
 #c {
     width: 512px;
     height: 512px;
-    image-rendering: pixelated;
     image-rendering: -moz-crisp-edges;         /* Firefox */
     image-rendering:   -o-crisp-edges;         /* Opera */
     image-rendering: -webkit-optimize-contrast;/* Webkit (non-standard naming) */
     -ms-interpolation-mode: nearest-neighbor;  /* IE (non-standard property) */
+    image-rendering: pixelated;
 }

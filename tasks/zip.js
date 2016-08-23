@@ -4,7 +4,7 @@ const rename    = require('gulp-rename');
 
 module.exports = () => {
   gulp.task( 'zip', [ 'build', 'template' ], () => {
-    return gulp.src('./dist/index.min.html')
+    return gulp.src('./dist/index.min.html', './dist/assets/*.png')
       .pipe( rename('index.html') )
       .pipe( zip('game.zip') )
       .pipe( gulp.dest('dist') );

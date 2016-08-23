@@ -1,6 +1,9 @@
 
 import './libs/tiny-canvas.js';
 
+import Sprite from './classes/sprite.js';
+
+
 /**
  * Tiny-Canvas Canvas
  * @type {TCCanvas}
@@ -30,6 +33,12 @@ var LEFT = false;
  * @type {Boolean}
  */
 var JUMP = false;
+
+/**
+ * Number of Jumps
+ * @type {Number}
+ */
+var JUMPS = 2;
 
 /**
  * Positive jump speed
@@ -100,10 +109,8 @@ var PlayerFrames = [
   [16, 0, 16, 20],
   [32, 0, 16, 20],
   [48, 0, 16, 20],
-  [64, 0, 16, 20],
-  [80, 0, 16, 20],
+  [64, 0, 16, 20]
 ];
-
 /**
  * TODO: Add desc
  * @type {Number}
@@ -147,95 +154,8 @@ var MIN_Y = 0;
  */
 var DisplayObjectArray = [];
 
-/**
- * @class An Image based DisplayObject
- * @param {Number} x       Starting X position
- * @param {Number} y       Starting Y position
- * @param {TCTexture} texture Tiny-Canvas Texture object
- * @param {Number[]} frame   Frame position data [x, y, width, height]
- * @return {Sprite}
- */
-function Sprite(x, y, texture, frame) {
-  /**
-   * Canvas X position
-   * @type {Number}
-   */
-  this.posX = x;
-
-  /**
-   * Canvas Y position
-   * @type {Number}
-   */
-  this.posY = y;
-
-  /**
-   * Frame width
-   * @type {Number}
-   */
-  this.width = frame[2];
-
-  /**
-   * Frame Height
-   * @type {[type]}
-   */
-  this.height = frame[3];
-
-  /**
-   * Speed on the X plane
-   * Left = 0, Right = Canvas Width
-   * @type {Number}
-   */
-  this.speedX = 0;
-
-  /**
-   * Speed on the Y plane.
-   * Top = 0, Bottom = Canvas.height
-   * @type {Number}
-   */
-  this.speedY = 0;
-
-  /**
-   * Rotation ?? Radians? Degrees?
-   * @type {Number}
-   */
-  this.rotation = 0;
-
-  /**
-   * FrameX / Texture's total width;
-   * @type {Number}
-   */
-  this.u0 = frame[0] / texture.width;
-
-  /**
-   * FrameY / Texture's total height
-   * @type {Number}
-   */
-  this.v0 = frame[1] / texture.height;
-
-  /**
-   * u0 plus (Frame's width / Texture's total Width)
-   * @type {Number}
-   */
-  this.u1 = this.u0 + (frame[2] / texture.width);
-
-  /**
-   * v0 plus (Frame's height / Texture's total height)
-   * @type {[type]}
-   */
-  this.v1 = this.v0 + (frame[3] / texture.height);
-
-  /**
-   * Half of the Frame's width
-   * @type {Number}
-   */
-  this.halfWidth = frame[2] / 2;
-
-  /**
-   * Half of the Frame's height
-   * @type {Number}
-   */
-  this.halfHeight = frame[3] / 2;
-}
+var currentFrame = 0;
+var frameCount = 0;
 
 
 /**
@@ -257,9 +177,10 @@ function loadComplete() {
  * Creates all sprites
  */
 function create() {
-  Player = new Sprite(20, 0, PlayerTexture, PlayerFrames[0]);
+  Player = new Sprite(20, 0, PlayerTexture, PlayerFrames[currentFrame]);
 
   CANVAS.bkg(0.227, 0.227, 0.227);
+
   mainLoop();
 }
 
@@ -275,15 +196,40 @@ function update() {
    */
   if (RIGHT) {
     Player.speedX = Math.min(Player.speedX + WALK_SPEED, TOP_SPEED);
+    // currentFrame += 1;
+    // if (PlayerFrames.length - 1 === currentFrame) {
+    //   currentFrame = 0;
+    // }
   }
 
   if (LEFT) {
     Player.speedX = Math.max(Player.speedX - WALK_SPEED, -TOP_SPEED);
   }
 
+  if (GROUND && (RIGHT || LEFT)) {
+    if (frameCount % 4 === 0) {
+      currentFrame = (PlayerFrames.length - 1 === currentFrame) ? 0 : ++currentFrame;
+      Player.updateFrame(PlayerFrames[currentFrame]);
+    }
+    frameCount++;
+  } else if (GROUND) {
+    currentFrame = 4;
+    Player.updateFrame(PlayerFrames[currentFrame]);
+  } else {
+    currentFrame = 0;
+    Player.updateFrame(PlayerFrames[currentFrame]);
+  }
+
   if (JUMP && GROUND) {
     Player.speedY = -JUMP_SPEED;
     GROUND = false;
+    JUMPS -= 1;
+  }
+
+  if (JUMP && !GROUND && JUMPS > 0 && Player.speedY > -5) {
+    Player.speedY = -JUMP_SPEED;
+    GROUND = false;
+    JUMPS -= 1;
   }
 
   /**
@@ -302,8 +248,10 @@ function update() {
    */
   if (Math.abs(Player.speedX) < 1) {
     Player.speedX = 0;
+  } else if (GROUND) {
+    Player.speedX *= 0.8;
   } else {
-    Player.speedX *= 0.9;
+    Player.speedX *= 0.95;
   }
 
   /**
@@ -313,6 +261,7 @@ function update() {
     Player.posY = MAX_Y - Player.height;
     Player.speedY = 0;
     GROUND = true;
+    JUMPS = 2;
   } else if (Player.posY < MIN_Y) {
     Player.posY = MIN_Y;
   }
@@ -351,7 +300,7 @@ function draw() {
     PlayerTexture,
     -Player.halfWidth,
     0,
-    Player.width,
+    Player.width * 2,
     Player.height,
     Player.u0,
     Player.v0,
